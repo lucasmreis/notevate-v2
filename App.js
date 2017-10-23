@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, View } from "react-native";
+import { Text, View, Alert } from "react-native";
 
 import { get, add, remove } from "./src/storage";
 import Intro from "./src/Intro";
@@ -44,8 +44,16 @@ export default class App extends React.Component<{}, State> {
   };
 
   removeSentenceAction = async (sentence: string) => {
-    const sentences = await remove(sentence);
-    this.goToListOrIntro(sentences);
+    Alert.alert("Are you sure?", `Sentence: ${sentence}`, [
+      { text: "No!", onPress: () => {}, style: "cancel" },
+      {
+        text: "Yes, please",
+        onPress: async () => {
+          const sentences = await remove(sentence);
+          return this.goToListOrIntro(sentences);
+        }
+      }
+    ]);
   };
 
   render() {
