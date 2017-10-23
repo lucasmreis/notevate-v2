@@ -1,7 +1,34 @@
 import React from "react";
-import { Dimensions, StyleSheet, ScrollView, View, Text } from "react-native";
+import {
+  Button,
+  Dimensions,
+  StyleSheet,
+  ScrollView,
+  View,
+  Text
+} from "react-native";
 
-export default class extends React.Component {
+const pages = [
+  {
+    text:
+      "Swipe down to create your first motivational note: a great quote, a warm-and-fuzzy memory or a nudge to keep you on track."
+  },
+  {
+    text:
+      "Write your motivational note and save it for a rainny day. We don’t keep your pesonal data, so your notes only exist on your device."
+  },
+  {
+    last: true,
+    text:
+      "Swipe up to delete your motivational note. We don’t keep your personal data, so your deleted notes are gone forever."
+  }
+];
+
+type Props = {
+  endIntroAction: () => mixed
+};
+
+export default class extends React.Component<Props> {
   getSize() {
     return {
       width: Dimensions.get("window").width,
@@ -9,38 +36,29 @@ export default class extends React.Component {
     };
   }
 
+  renderPage = ({ text, last }, i) => {
+    const { endIntroAction } = this.props;
+    return (
+      <View key={i} style={[styles.page, this.getSize()]}>
+        <Text>{text}</Text>
+        {last && <Button title="OK" onPress={endIntroAction} />}
+      </View>
+    );
+  };
+
   render() {
     return (
-      <ScrollView horizontal pagingEnabled style={{ flex: 1 }}>
-        <View
-          style={[
-            styles.page,
-            { backgroundColor: "powderblue" },
-            this.getSize()
-          ]}
-        >
-          <Text>PAGE 1</Text>
-        </View>
-        <View
-          style={[styles.page, { backgroundColor: "skyblue" }, this.getSize()]}
-        >
-          <Text>PAGE 2</Text>
-        </View>
-        <View
-          style={[
-            styles.page,
-            { backgroundColor: "steelblue" },
-            this.getSize()
-          ]}
-        >
-          <Text>PAGE 3</Text>
-        </View>
+      <ScrollView horizontal pagingEnabled style={styles.container}>
+        {pages.map(this.renderPage)}
       </ScrollView>
     );
   }
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1
+  },
   page: {
     flex: 1,
     backgroundColor: "#fff",
