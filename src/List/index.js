@@ -6,7 +6,7 @@ import {
   Button,
   View,
   Text,
-  PanResponder
+  TouchableOpacity
 } from "react-native";
 
 type Props = {
@@ -15,41 +15,10 @@ type Props = {
   removeSentenceAction: (sentence: string) => mixed
 };
 
-type State =
-  | {
-      status: "MOVING",
-      y: number
-    }
-  | { status: "IDLE" };
+type State = { currentPage: number };
 
 export default class extends React.Component<Props, State> {
-  state = { status: "IDLE" };
-
-  panResponder = {};
-
-  componentWillMount() {
-    this.PanResponder = PanResponder.create({
-      onStartShouldSetPanResponder: (evt, gestureState) => true,
-      onPanResponderGrant: this.onPanResponderGrant,
-      onPanResponderMove: this.onPanResponderMove,
-      onPanResponderRelease: this.onPanResponderRelease
-    });
-  }
-
-  onPanResponderGrant = (e, gestureState) => {
-    console.log("onPanResponderGrant");
-    this.setState({ status: "MOVING", dy: 0 });
-  };
-
-  onPanResponderMove = (e, gestureState) => {
-    console.log("onPanResponderMove");
-    this.setState({ status: "MOVING", dy: gestureState.dy });
-  };
-
-  onPanResponderRelease = () => {
-    console.log("onPanResponderRelease");
-    this.setState({ status: "IDLE" });
-  };
+  state = { currentPage: 0 };
 
   getSize() {
     return {
@@ -58,44 +27,59 @@ export default class extends React.Component<Props, State> {
     };
   }
 
-  removeSentence = (sentence: string) => () =>
+  removeSentence = () => {
+    const sentence = this.props.sentences[this.state.currentPage];
     this.props.removeSentenceAction(sentence);
+    this.scrollView.scrollTo({ x: 0, y: 0, animated: false });
+    this.setState({ currentPage: 0 });
+  };
+
+  handleScroll = ev => {
+    const page = Math.floor(
+      ev.nativeEvent.contentOffset.x / Dimensions.get("window").width
+    );
+    this.setState({ currentPage: page });
+  };
 
   renderPage = (sentence: string, i) => {
     return (
       <View key={i} style={[styles.page, this.getSize()]}>
-        <Button title="Add" onPress={this.props.goToAdd} />
         <Text>{sentence}</Text>
-        <Button title="Remove" onPress={this.removeSentence(sentence)} />
       </View>
     );
   };
 
   render() {
-    const { sentences } = this.props;
+    const { sentences, goToAdd } = this.props;
     return (
       <View style={styles.container}>
-        <ScrollView horizontal pagingEnabled style={styles.scrollContainer}>
+        <ScrollView
+          ref={sv => (this.scrollView = sv)}
+          horizontal
+          pagingEnabled
+          style={styles.scrollContainer}
+          onMomentumScrollEnd={this.handleScroll}
+        >
           {sentences.map(this.renderPage)}
         </ScrollView>
-        <View
-          style={[styles.action, { top: 0, left: 0, right: 0 }]}
-          {...this.panResponder.panHandlers}
-        >
-          <Text>ADD {JSON.stringify(this.state)}</Text>
-        </View>
-        <View
-          style={[styles.action, { bottom: 0, left: 0, right: 0 }]}
-          {...this.panResponder.panHandlers}
-        >
-          <Text>REMOVE {JSON.stringify(this.state)}</Text>
+        <View style={styles.actionContainer}>
+          <TouchableOpacity
+            onPress={goToAdd}
+            style={[styles.action, { backgroundColor: "#0f0" }]}
+          >
+            <Text style={styles.actionText}>Add</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={this.removeSentence}
+            style={[styles.action, { backgroundColor: "#f00" }]}
+          >
+            <Text style={styles.actionText}>Remove</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
   }
 }
-
-// {...this.panResponder.panHandlers}
 
 const styles = StyleSheet.create({
   container: {
@@ -110,11 +94,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center"
   },
-  action: {
+  actionContainer: {
     position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flex: 1,
+    flexDirection: "row",
     height: 100,
-    backgroundColor: "#999",
     alignItems: "center",
     justifyContent: "center"
+  },
+  action: {
+    width: "100%",
+    height: "100%",
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  actionText: {
+    color: "#fff"
   }
 });
