@@ -6,8 +6,12 @@ import {
   Button,
   View,
   Text,
-  TouchableOpacity
+  TouchableOpacity,
+  PanResponder,
+  Animated
 } from "react-native";
+
+const ACTION_HEIGHT = 110;
 
 type Props = {
   sentences: string[],
@@ -15,10 +19,44 @@ type Props = {
   removeSentenceAction: (sentence: string) => mixed
 };
 
-type State = { currentPage: number };
+type State = { currentPage: number, animTop: mixed, animBottom: mixed };
 
 export default class extends React.Component<Props, State> {
-  state = { currentPage: 0 };
+  state = {
+    currentPage: 0,
+    animTop: new Animated.Value(0),
+    animBottom: new Animated.Value(0)
+  };
+
+  componentWillMount() {
+    this.panResponderTop = PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (e, gesture) => {
+        this.state.animTop.setValue(gesture.dy);
+      },
+      onPanResponderRelease: (e, gesture) => {
+        if (gesture.dy > ACTION_HEIGHT) {
+          this.props.goToAdd();
+        }
+
+        Animated.timing(this.state.animTop, { toValue: 0 }).start();
+      }
+    });
+
+    this.panResponderBottom = PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (e, gesture) => {
+        this.state.animBottom.setValue(gesture.dy);
+      },
+      onPanResponderRelease: (e, gesture) => {
+        if (gesture.dy < -ACTION_HEIGHT) {
+          this.removeSentence();
+        }
+
+        Animated.timing(this.state.animBottom, { toValue: 0 }).start();
+      }
+    });
+  }
 
   getSize() {
     return {
@@ -49,6 +87,72 @@ export default class extends React.Component<Props, State> {
     );
   };
 
+  renderTopAction = () => {
+    const clamped = Animated.diffClamp(this.state.animTop, 0, ACTION_HEIGHT);
+
+    const translateY = Animated.add(clamped, -ACTION_HEIGHT);
+
+    const opacity = clamped.interpolate({
+      inputRange: [0, ACTION_HEIGHT],
+      outputRange: [0, 1]
+    });
+
+    return (
+      <View
+        style={styles.actionContainerTop}
+        {...this.panResponderTop.panHandlers}
+      >
+        <Animated.View
+          style={[
+            styles.action,
+            {
+              backgroundColor: "rgba(0,0,255,1)",
+              transform: [{ translateY }],
+              opacity
+            }
+          ]}
+        >
+          <Text style={styles.actionText}>Add</Text>
+        </Animated.View>
+      </View>
+    );
+  };
+
+  renderBottomAction = () => {
+    const clamped = Animated.diffClamp(
+      this.state.animBottom,
+      -ACTION_HEIGHT,
+      0
+    );
+
+    const translateY = Animated.add(clamped, ACTION_HEIGHT);
+
+    const opacity = clamped.interpolate({
+      inputRange: [-ACTION_HEIGHT, 0],
+      outputRange: [1, 0]
+    });
+
+    return (
+      <View
+        style={styles.actionContainerBottom}
+        {...this.panResponderBottom.panHandlers}
+      >
+        <Animated.View
+          style={[
+            styles.action,
+            {
+              backgroundColor: "rgba(255,0,0,1)",
+              transform: [{ translateY }],
+              opacity
+            }
+          ]}
+        >
+          <Text style={styles.actionText}>Remove</Text>
+        </Animated.View>
+      </View>
+    );
+  };
+
   render() {
     const { sentences, goToAdd } = this.props;
     return (
@@ -62,20 +166,9 @@ export default class extends React.Component<Props, State> {
         >
           {sentences.map(this.renderPage)}
         </ScrollView>
-        <View style={styles.actionContainer}>
-          <TouchableOpacity
-            onPress={goToAdd}
-            style={[styles.action, { backgroundColor: "#0f0" }]}
-          >
-            <Text style={styles.actionText}>Add</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={this.removeSentence}
-            style={[styles.action, { backgroundColor: "#f00" }]}
-          >
-            <Text style={styles.actionText}>Remove</Text>
-          </TouchableOpacity>
-        </View>
+
+        {this.renderTopAction()}
+        {this.renderBottomAction()}
       </View>
     );
   }
@@ -83,6 +176,7 @@ export default class extends React.Component<Props, State> {
 
 const styles = StyleSheet.create({
   container: {
+    position: "relative",
     flex: 1
   },
   scrollContainer: {
@@ -94,18 +188,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center"
   },
-  actionContainer: {
+  actionContainerTop: {
+    backgroundColor: "rgba(0,0,255,0.2)",
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    flex: 1,
+    flexDirection: "row",
+    height: ACTION_HEIGHT,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  actionContainerBottom: {
+    backgroundColor: "rgba(255,0,0,0.2)",
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
     flex: 1,
     flexDirection: "row",
-    height: 100,
+    height: ACTION_HEIGHT,
     alignItems: "center",
     justifyContent: "center"
   },
   action: {
+    transform: [{ perspective: 1000 }],
     width: "100%",
     height: "100%",
     flex: 1,
